@@ -18,6 +18,12 @@ var db = nano.db.use("unique");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
 var port = process.env.PORT || 8080;	// Set our port
 
 // ROUTES FOR OUR API
@@ -29,6 +35,8 @@ router.use(function(request, response, next)
 {
 	// Do logging
 	console.log("Something is happening.");
+	console.log("Content-Type: " + request.headers["content-type"]);
+	console.log(request.body);
 	
 	next();
 });
@@ -52,20 +60,31 @@ router.route("/comics")
 
 	.post(function(request, response) 
 	{
-	    
+	    console.log("Got a create request");
+
+		console.log("request: " + request.data);
 	    var newComic = {
 			"name": request.body.name, 
 			"date-published": Math.floor(new Date() / 1000),
-			"visible": false,
+			"visible": true,
 			"comments": request.body.comments,
-			"chapter": request.body.chapter,
-			"previouse": request.body.previouse,
+			"chapter": "",
+			"previouse": "",
 			"next": null,
 			"tags": request.body.tags
 		};
+		
+		console.log("Name: " + request.body.name);
+		console.log("Comments: " + request.body.comments);
+		console.log("Tags: " + request.body.tags);
 
 		db.insert(newComic, function(error, body)
 		{
+			if(error)
+			{
+				response.json(error);
+				return;
+			}
 			response.json({ message: "posted a new comic" });
 		});
 	});
@@ -82,7 +101,7 @@ router.route("/comics/latest")
 				return;
 			}
 
-			response.json(body.rows[0]);
+			response.json(body.rows[0].value);
 		});
 	});
 
