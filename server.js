@@ -1,93 +1,119 @@
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-var fs = require("fs");
+// BASE SETUP
+// =============================================================================
 
-// Configure the app to use bodyParser()
-// This lets us get data from a POST request
-app.use(bodyParser.urlencoded({extended: true}));
+// Call the packages we need
+var express	= require("express");				// Call express
+var app	= express();							// Define our app using express
+var bodyParser = require("body-parser");
+
+// Configure app to use bodyParser()
+// This will let us get the data from a POST
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Set the application port
-var port = process.env.PORT || 8080;
+var port = process.env.PORT || 8080;	// Set our port
 
-// Routes for the API
+// ROUTES FOR OUR API
+// =============================================================================
+var router = express.Router();	// Get an instance of the express Router
 
-var router = express.Router();   // The express router
-
-// Test to make sure everything is working
-router.get("/", function(request, response)
+// Middleware to use for all requests
+router.use(function(request, response, next)
 {
-   request.json({
-      message: "Horray! Welcome to our API"
-   });
+	// Do logging
+	console.log("Something is happening.");
+	
+	next();
 });
 
-// Start the server
-app.listen(port);
-console.log("Magic happens on port " + port);
+// Test route to make sure everything is working (accessed at GET http://localhost:8080)
+router.get("/", function(request, response) {
+	response.json({ message: "hooray! welcome to our api!"});	 
+});
 
-// Register the routes
-// All of the routes will be prefixed with /api
-/*app.use("/api", router);
+// More routes for our API will happen here
 
-// GET list of all users
-app.get('/listUsers', function (req, res)
-{
-	fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data)
+router.route("/comics")
+
+	.get(function(request, response)
 	{
-		console.log( data );
-		res.end( data );
+		response.json({ message: "listing all comics" });	
+	})
+
+	// Create a bear (accessed at POST http://localhost:8080/api/bears)
+	.post(function(request, response) 
+	{
+	    
+	    /*var bear = new Bear();		// Create a new instance of the Bear model
+	    bear.name = request.body.name;	// Set the bears name (comes from the request)
+
+	    // save the bear and check for errors
+	    bear.save(function(err) {
+	        if (err)
+	            response.send(err);
+
+	        response.json({ message: 'Bear created!' });
+	    });*/
+
+		response.json({ message: "posted a new comic" });	
 	});
-});
 
-var user = {
-   "user4" : {
-      "name" : "mohit",
-      "password" : "password4",
-      "profession" : "teacher",
-      "id": 4
-   }
-};
+router.route("/comics/latest")
+	
+	.get(function(request, response)
+	{
+		response.json({ message: "Getting the latest commic" });	
+	});
 
-// PUT in a new user
-app.get('/addUser', function (req, res) {
-   // First read existing users.
-   fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data) {
-      data = JSON.parse( data );
-      data["user4"] = user["user4"];
-      console.log( data );
-      res.end( JSON.stringify(data));
-   });
-});
+router.route("/comics/:id")
 
-// GET details of one user
-app.get('/:id', function (req, res) {
-	 // First read existing users.
-	 fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data) {
-			data = JSON.parse( data );
-			var user = data["user" + req.params.id] 
-			console.log( user );
-			res.end( JSON.stringify(user));
-	 });
-});
+	.get(function(request, response)
+	{
+		response.json({ message: "Getting an individual comic" });	
+	})
 
-// DELETE a user
-app.get('/deleteUser/:id', function (req, res) {
-   // First read existing users.
-   fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data) {
-      data = JSON.parse( data );
-      delete data["user" + req.params.is];
-       
-      console.log( data );
-      res.end( JSON.stringify(data));
-   });
-})
+	// Create a bear (accessed at POST http://localhost:8080/api/bears)
+	.post(function(request, response) 
+	{
+	    
+	    /*var bear = new Bear();		// Create a new instance of the Bear model
+	    bear.name = request.body.name;	// Set the bears name (comes from the request)
 
-var server = app.listen(8081, function ()
-{
-	var host = server.address().address;
-	var port = server.address().port;
+	    // save the bear and check for errors
+	    bear.save(function(err) {
+	        if (err)
+	            response.send(err);
 
-	console.log("Example app listening at http://%s:%s", host, port)
-});*/
+	        response.json({ message: 'Bear created!' });
+	    });*/
+
+		response.json({ message: "Updating a comic" });	
+	})
+
+	.delete(function(request, response)
+	{
+		response.json({ message: "Deleting a comic" });	
+	});
+
+router.route("/login")
+	
+	.post(function(request, response)
+	{
+		response.json({ message: "Logging the user in" });	
+	});
+
+router.route("/logout")
+	
+	.post(function(request, response)
+	{
+		response.json({ message: "Logging the user out" });	
+	});
+
+// REGISTER OUR ROUTES -------------------------------
+// All of our routes will be prefixed with /api
+app.use('/', router);
+
+// START THE SERVER
+// =============================================================================
+app.listen(port);
+console.log('Magic happens on port ' + port);
