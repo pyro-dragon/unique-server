@@ -74,6 +74,16 @@ router.route("/comics/latest")
 	
 	.get(function(request, response)
 	{
+		db.view("unique", "latest", {"descending": true, "limit": 1}, function(error, body)
+		{
+			if(error)
+			{
+				response.json(error);
+				return;
+			}
+
+			response.json(body.rows[0]);
+		});
 	});
 
 router.route("/comics/:id")
