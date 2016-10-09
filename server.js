@@ -6,6 +6,13 @@ var express	= require("express");				// Call express
 var app	= express();							// Define our app using express
 var bodyParser = require("body-parser");
 
+// COUCHDB SETUP
+// =============================================================================
+var nano = require("nano")("http://dragonscancode.com:5984");
+
+var db = nano.db.use("unique");
+// =============================================================================
+
 // Configure app to use bodyParser()
 // This will let us get the data from a POST
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -37,32 +44,36 @@ router.route("/comics")
 
 	.get(function(request, response)
 	{
-		response.json({ message: "listing all comics" });	
+		db.view("unique", "all", function(error, body)
+		{
+			response.json({ message: "listing all comics" });
+		});
 	})
 
-	// Create a bear (accessed at POST http://localhost:8080/api/bears)
 	.post(function(request, response) 
 	{
 	    
-	    /*var bear = new Bear();		// Create a new instance of the Bear model
-	    bear.name = request.body.name;	// Set the bears name (comes from the request)
+	    var newComic = {
+			"name": request.body.name, 
+			"date-published": Math.floor(new Date() / 1000),
+			"visible": false,
+			"comments": request.body.comments,
+			"chapter": request.body.chapter,
+			"previouse": request.body.previouse,
+			"next": null,
+			"tags": request.body.tags
+		};
 
-	    // save the bear and check for errors
-	    bear.save(function(err) {
-	        if (err)
-	            response.send(err);
-
-	        response.json({ message: 'Bear created!' });
-	    });*/
-
-		response.json({ message: "posted a new comic" });	
+		db.insert(newComic, function(error, body)
+		{
+			response.json({ message: "posted a new comic" });
+		});
 	});
 
 router.route("/comics/latest")
 	
 	.get(function(request, response)
 	{
-		response.json({ message: "Getting the latest commic" });	
 	});
 
 router.route("/comics/:id")
@@ -72,22 +83,10 @@ router.route("/comics/:id")
 		response.json({ message: "Getting an individual comic" });	
 	})
 
-	// Create a bear (accessed at POST http://localhost:8080/api/bears)
 	.post(function(request, response) 
 	{
 	    
-	    /*var bear = new Bear();		// Create a new instance of the Bear model
-	    bear.name = request.body.name;	// Set the bears name (comes from the request)
-
-	    // save the bear and check for errors
-	    bear.save(function(err) {
-	        if (err)
-	            response.send(err);
-
-	        response.json({ message: 'Bear created!' });
-	    });*/
-
-		response.json({ message: "Updating a comic" });	
+	    response.json({ message: "Updating a comic" });	
 	})
 
 	.delete(function(request, response)
