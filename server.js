@@ -15,6 +15,8 @@ var db = nano.db.use("unique");
 
 // Configure app to use bodyParser()
 // This will let us get the data from a POST
+app.use(bodyParser.urlencoded({limit: '50mb'}));
+app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -65,6 +67,7 @@ router.route("/comics")
 		console.log("request: " + request.data);
 	    var newComic = {
 			"name": request.body.name, 
+			"image": request.body.image,
 			"date-published": Math.floor(new Date() / 1000),
 			"visible": true,
 			"comments": request.body.comments,
@@ -77,6 +80,7 @@ router.route("/comics")
 		console.log("Name: " + request.body.name);
 		console.log("Comments: " + request.body.comments);
 		console.log("Tags: " + request.body.tags);
+		//console.log("Image: " + request.body.image);
 
 		db.insert(newComic, function(error, body)
 		{
