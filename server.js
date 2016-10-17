@@ -1,64 +1,118 @@
-var express = require('express');
-var app = express();
-var fs = require("fs");
+// BASE SETUP
+// =============================================================================
 
-// GET list of all users
-app.get('/listUsers', function (req, res)
+// Call the packages we need
+var express	= require("express");				// Call express
+var app	= express();							// Define our app using express
+var bodyParser = require("body-parser");
+
+// COUCHDB SETUP
+// =============================================================================
+var nano = require("nano")("http://dragonscancode.com:5984");
+
+var db = nano.db.use("unique");
+// =============================================================================
+
+// Configure app to use bodyParser()
+// This will let us get the data from a POST
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+var port = process.env.PORT || 8080;	// Set our port
+
+// ROUTES FOR OUR API
+// =============================================================================
+var router = express.Router();	// Get an instance of the express Router
+
+// Middleware to use for all requests
+router.use(function(request, response, next)
 {
-	fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data)
+	// Do logging
+	console.log("Something is happening.");
+	
+	next();
+});
+
+// Test route to make sure everything is working (accessed at GET http://localhost:8080)
+router.get("/", function(request, response) {
+	response.json({ message: "hooray! welcome to our api!"});	 
+});
+
+// More routes for our API will happen here
+
+router.route("/comics")
+
+	.get(function(request, response)
 	{
-		console.log( data );
-		res.end( data );
+		db.view("unique", "all", function(error, body)
+		{
+			response.json({ message: "listing all comics" });
+		});
+	})
+
+	.post(function(request, response) 
+	{
+	    
+	    var newComic = {
+			"name": request.body.name, 
+			"date-published": Math.floor(new Date() / 1000),
+			"visible": false,
+			"comments": request.body.comments,
+			"chapter": request.body.chapter,
+			"previouse": request.body.previouse,
+			"next": null,
+			"tags": request.body.tags
+		};
+
+		db.insert(newComic, function(error, body)
+		{
+			response.json({ message: "posted a new comic" });
+		});
 	});
-});
 
-var user = {
-   "user4" : {
-      "name" : "mohit",
-      "password" : "password4",
-      "profession" : "teacher",
-      "id": 4
-   }
-};
+router.route("/comics/latest")
+	
+	.get(function(request, response)
+	{
+	});
 
-// PUT in a new user
-app.get('/addUser', function (req, res) {
-   // First read existing users.
-   fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data) {
-      data = JSON.parse( data );
-      data["user4"] = user["user4"];
-      console.log( data );
-      res.end( JSON.stringify(data));
-   });
-});
+router.route("/comics/:id")
 
-// GET details of one user
-app.get('/:id', function (req, res) {
-	 // First read existing users.
-	 fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data) {
-			data = JSON.parse( data );
-			var user = data["user" + req.params.id] 
-			console.log( user );
-			res.end( JSON.stringify(user));
-	 });
-});
+	.get(function(request, response)
+	{
+		response.json({ message: "Getting an individual comic" });	
+	})
 
-// DELETE a user
-app.get('/deleteUser/:id', function (req, res) {
-   // First read existing users.
-   fs.readFile( __dirname + "/" + "users.json", 'utf8', function (err, data) {
-      data = JSON.parse( data );
-      delete data["user" + req.params.is];
-       
-      console.log( data );
-      res.end( JSON.stringify(data));
-   });
-})
+	.post(function(request, response) 
+	{
+	    
+	    response.json({ message: "Updating a comic" });	
+	})
 
-var server = app.listen(8081, function ()
-{
-	var host = server.address().address;
-	var port = server.address().port;
+	.delete(function(request, response)
+	{
+		response.json({ message: "Deleting a comic" });	
+	});
 
-	console.log("Example app listening at http://%s:%s", host, port)
-});
+router.route("/login")
+	
+	.post(function(request, response)
+	{
+		response.json({ message: "Logging the user in" });	
+	});
+
+router.route("/logout")
+	
+	.post(function(request, response)
+	{
+		response.json({ message: "Logging the user out" });	
+	});
+
+// REGISTER OUR ROUTES -------------------------------
+// All of our routes will be prefixed with /api
+app.use('/', router);
+
+// START THE SERVER
+// =============================================================================
+app.listen(port);
+console.log('Magic happens on port ' + port);
