@@ -13,6 +13,11 @@ var nano = require("nano")("http://dragonscancode.com:5984");
 var db = nano.db.use("unique");
 // =============================================================================
 
+// COMIC POSTING VARS
+// =============================================================================
+var latestComic = null;
+var newComic = null;
+
 // Configure app to use bodyParser()
 // This will let us get the data from a POST
 app.use(bodyParser.urlencoded({limit: '50mb'}));
@@ -36,9 +41,7 @@ var router = express.Router();	// Get an instance of the express Router
 router.use(function(request, response, next)
 {
 	// Do logging
-	console.log("Something is happening.");
 	console.log("Content-Type: " + request.headers["content-type"]);
-	console.log(request.body);
 	
 	next();
 });
@@ -60,12 +63,13 @@ router.route("/comics")
 		});
 	})
 
+	/*------------------------------------*/
+	// Post a new comic or update a comic //
+	/*------------------------------------*/
 	.post(function(request, response) 
 	{
-	    console.log("Got a create request");
-
-		console.log("request: " + request.data);
-	    var newComic = {
+		// Build the new comic data structure
+	    newComic = {
 			"name": request.body.name, 
 			"image": request.body.image,
 			"date-published": Math.floor(new Date() / 1000),
@@ -76,36 +80,31 @@ router.route("/comics")
 			"next": null,
 			"tags": request.body.tags
 		};
-		
-		console.log("Name: " + request.body.name);
-		console.log("Comments: " + request.body.comments);
-		console.log("Tags: " + request.body.tags);
-		//console.log("Image: " + request.body.image);
 
-		db.insert(newComic, function(error, body)
-		{
-			if(error)
+		// Grab the latest comic
+		getLatest(
+			function()
 			{
-				response.json(error);
-				return;
-			}
-			response.json({ message: "posted a new comic" });
-		});
+				linkNewComic()
+			}, response.json());
 	});
 
 router.route("/comics/latest")
 	
 	.get(function(request, response)
 	{
-		db.view("unique", "latest", {"descending": true, "limit": 1}, function(error, body)
-		{
-			if(error)
-			{
-				response.json(error);
-				return;
-			}
+		getLatest(
 
-			response.json(body.rows[0].value);
+		// Success
+		function(body)
+		{
+			response.json(latestComic);
+		}, 
+
+		// Fail
+		function(error)
+		{
+			response.json(error);
 		});
 	});
 
@@ -140,6 +139,98 @@ router.route("/logout")
 	{
 		response.json({ message: "Logging the user out" });	
 	});
+
+// Utility Functions
+// =============================================================================	
+
+/* Set up next/prev links for a new comic */
+var linkNewComic = function(body)
+{
+	// We already have the latest comic
+	console.log("latestComic._id: " + latestComic);
+	newComic.previouse = latestComic._id;
+
+	// Write out the new and latest comics
+	console.log("Writing out the new comic");
+	putComic(newComic, 
+		function(body)
+		{
+			latestComic.next = body.id;
+			putComic(latestComic);
+		}
+
+	);
+};
+
+// Get the latest comic
+// @args
+// success - function to execute for a successful retrival
+// fail - function to execute for a failure
+var getLatest = function(success, fail)
+{
+	console.log("Preparing to GET latestComic. \nsuccess: " + success + "\nfail: " + fail);
+	db.view("unique", "latest", {"descending": true, "limit": 1}, function(error, body)
+	{
+		if(error)
+		{
+			// Execute the optional function
+			if(typeof fail == "function")
+			{
+				console.error(JSON.stringify(error));
+				console.log("Executing fail function...");
+				fail(error);
+
+				return;
+			}
+		}
+		else
+		{
+			latestComic = body.rows[0].value;
+			console.log("Latest comic updated to be: " + latestComic.name);
+
+			// Execute the optional function
+			if(typeof success == "function")
+			{
+				console.log("Executing success function...");
+				success(body);
+			}
+		}
+	});
+};
+
+// Put a new or updated comic into the database
+// @Args
+// comic - A comic object. No ID field = new comic
+// success - A function to perform
+var putComic = function(comic, success, fail)
+{
+	console.log("Preparing to PUT. \ncomic: " + comic + "\nsuccess: " + success + "\nfail: " + fail);
+	db.insert(comic, function(error, body)
+	{
+		if(error)
+		{
+			console.error(JSON.stringify(error));
+
+			if(typeof fail == "function")
+			{
+				console.log("Executing fail function...");
+				fail(error);
+			}
+
+			return;
+		}
+		else
+		{
+			if (typeof success == "function") 
+			{
+				console.log("Executing success function...");
+				success(body);
+			}
+		}
+
+		console.log("Successful upload!");
+	});
+}
 
 // REGISTER OUR ROUTES -------------------------------
 // All of our routes will be prefixed with /api
