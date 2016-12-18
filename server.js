@@ -5,6 +5,7 @@
 var express	= require("express");				// Call express
 var app	= express();							// Define our app using express
 var bodyParser = require("body-parser");
+var jwt = require("express-jwt");
 
 // COUCHDB SETUP
 // =============================================================================
@@ -45,6 +46,39 @@ router.use(function(request, response, next)
 	
 	next();
 });
+
+// JWT SECURITY
+// =============================================================================
+
+// Init
+//app.use(jwt.init("dragonsticks"));
+
+// Setting the user
+app.get("/protected", 
+	jwt({
+		secret: "dragonsticks", 
+		audience: "/admin"
+	}), 
+	function(request, response)
+	{
+		if(!request.user.admin)
+		{
+			return response.sendStatus(401);
+		}
+
+		response.sendStatus(200);
+	}
+);/*
+
+// Uprotected paths
+app.use(
+	jwt({
+		secret: "shhhhhhhhared-secret"
+	}). unless({path: ["/token"]})
+);*/
+
+// ROUTER
+// =============================================================================
 
 // Test route to make sure everything is working (accessed at GET http://localhost:8080)
 router.get("/", function(request, response) {
