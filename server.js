@@ -5,14 +5,17 @@
 var express	= require("express");				// Call express
 var app	= express();							// Define our app using express
 var bodyParser = require("body-parser");
-var jwt = require("express-jwt");
+var jwt = require("jsonwebtoken");
+var config = require("./config.js");
 
 // COUCHDB SETUP
 // =============================================================================
-var nano = require("nano")("http://dragonscancode.com:5984");
+var nano = require("nano")(config.databaseUrl);
 
-var db = nano.db.use("unique");
+var db = nano.db.use(config.database);
 // =============================================================================
+
+app.set("superSecret", config.secret);
 
 // COMIC POSTING VARS
 // =============================================================================
@@ -43,7 +46,7 @@ router.use(function(request, response, next)
 {
 	// Do logging
 	console.log("Content-Type: " + request.headers["content-type"]);
-	
+
 	next();
 });
 
@@ -51,38 +54,14 @@ router.use(function(request, response, next)
 // =============================================================================
 
 // Init
-//app.use(jwt.init("dragonsticks"));
 
-// Setting the user
-app.get("/protected", 
-	jwt({
-		secret: "dragonsticks", 
-		audience: "/admin"
-	}), 
-	function(request, response)
-	{
-		if(!request.user.admin)
-		{
-			return response.sendStatus(401);
-		}
-
-		response.sendStatus(200);
-	}
-);/*
-
-// Uprotected paths
-app.use(
-	jwt({
-		secret: "shhhhhhhhared-secret"
-	}). unless({path: ["/token"]})
-);*/
 
 // ROUTER
 // =============================================================================
 
 // Test route to make sure everything is working (accessed at GET http://localhost:8080)
 router.get("/", function(request, response) {
-	response.json({ message: "hooray! welcome to our api!"});	 
+	response.json({ message: "hooray! welcome to our api!"});
 });
 
 // More routes for our API will happen here
@@ -100,11 +79,11 @@ router.route("/comics")
 	/*------------------------------------*/
 	// Post a new comic or update a comic //
 	/*------------------------------------*/
-	.post(function(request, response) 
+	.post(function(request, response)
 	{
 		// Build the new comic data structure
 	    newComic = {
-			"name": request.body.name, 
+			"name": request.body.name,
 			"image": request.body.image,
 			"date-published": Math.floor(new Date() / 1000),
 			"visible": true,
@@ -119,12 +98,12 @@ router.route("/comics")
 		getLatest(
 			function()
 			{
-				linkNewComic()
+				linkNewComic();
 			}, response.json());
 	});
 
 router.route("/comics/latest")
-	
+
 	.get(function(request, response)
 	{
 		getLatest(
@@ -133,7 +112,7 @@ router.route("/comics/latest")
 		function(body)
 		{
 			response.json(latestComic);
-		}, 
+		},
 
 		// Fail
 		function(error)
@@ -146,36 +125,72 @@ router.route("/comics/:id")
 
 	.get(function(request, response)
 	{
-		response.json({ message: "Getting an individual comic" });	
+		response.json({ message: "Getting an individual comic" });
 	})
 
-	.post(function(request, response) 
+	.post(function(request, response)
 	{
-	    
-	    response.json({ message: "Updating a comic" });	
+	    response.json({ message: "Updating a comic" });
 	})
 
 	.delete(function(request, response)
 	{
-		response.json({ message: "Deleting a comic" });	
+		response.json({ message: "Deleting a comic" });
 	});
 
 router.route("/login")
-	
+
 	.post(function(request, response)
 	{
-		response.json({ message: "Logging the user in" });	
+		response.json({ message: "Logging the user in" });
 	});
 
 router.route("/logout")
-	
+
 	.post(function(request, response)
 	{
-		response.json({ message: "Logging the user out" });	
+		response.json({ message: "Logging the user out" });
 	});
 
+router.route('/auth')
+  .post(function(request, response)
+  {
+    // Check for username
+    db.view("unique", "authenticate", { keys: [request.body.username] }, function(error, body)
+		{
+      //console.log(request);
+
+      // Now check their password
+      if(request.body.password == body.rows[0].value)
+      {
+          // Matching password too, create a token
+        var token = jwt.sign(body.rows[0], app.get('superSecret'), {
+          "expiresIn": 86400 // expires in 24 hours
+        });
+
+        console.log("User " + request.body.username + " logged in.");
+
+        response.json({
+          success: true,
+          message: 'Enjoy your token!',
+          token: token
+        });
+
+          console.log(6);
+      }
+      else
+      {
+        console.log("Username or password not found");
+        response.json({
+          success: false,
+          message: 'Wrong username or password'
+        });
+      }
+		});
+  });
+
 // Utility Functions
-// =============================================================================	
+// =============================================================================
 
 /* Set up next/prev links for a new comic */
 var linkNewComic = function(body)
@@ -186,7 +201,7 @@ var linkNewComic = function(body)
 
 	// Write out the new and latest comics
 	console.log("Writing out the new comic");
-	putComic(newComic, 
+	putComic(newComic,
 		function(body)
 		{
 			latestComic.next = body.id;
@@ -255,7 +270,7 @@ var putComic = function(comic, success, fail)
 		}
 		else
 		{
-			if (typeof success == "function") 
+			if (typeof success == "function")
 			{
 				console.log("Executing success function...");
 				success(body);
@@ -264,7 +279,7 @@ var putComic = function(comic, success, fail)
 
 		console.log("Successful upload!");
 	});
-}
+};
 
 // REGISTER OUR ROUTES -------------------------------
 // All of our routes will be prefixed with /api
