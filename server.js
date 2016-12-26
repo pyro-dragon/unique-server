@@ -142,13 +142,7 @@ router.route('/auth')
 
         console.log("User " + request.body.username + " logged in.");
 
-        response.json({
-          success: true,
-          message: 'Enjoy your token!',
-          token: token
-        });
-
-          console.log(6);
+        response.json(token);
       }
       else
       {
