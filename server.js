@@ -50,12 +50,6 @@ router.use(function(request, response, next)
 	next();
 });
 
-// JWT SECURITY
-// =============================================================================
-
-// Init
-
-
 // ROUTER
 // =============================================================================
 
@@ -74,32 +68,6 @@ router.route("/comics")
 		{
 			response.json({ message: "listing all comics" });
 		});
-	})
-
-	/*------------------------------------*/
-	// Post a new comic or update a comic //
-	/*------------------------------------*/
-	.post(function(request, response)
-	{
-		// Build the new comic data structure
-	    newComic = {
-			"name": request.body.name,
-			"image": request.body.image,
-			"date-published": Math.floor(new Date() / 1000),
-			"visible": true,
-			"comments": request.body.comments,
-			"chapter": "",
-			"previouse": "",
-			"next": null,
-			"tags": request.body.tags
-		};
-
-		// Grab the latest comic
-		getLatest(
-			function()
-			{
-				linkNewComic();
-			}, response.json());
 	});
 
 router.route("/comics/latest")
@@ -138,13 +106,6 @@ router.route("/comics/:id")
 		response.json({ message: "Deleting a comic" });
 	});
 
-router.route("/login")
-
-	.post(function(request, response)
-	{
-		response.json({ message: "Logging the user in" });
-	});
-
 router.route("/logout")
 
 	.post(function(request, response)
@@ -152,6 +113,7 @@ router.route("/logout")
 		response.json({ message: "Logging the user out" });
 	});
 
+// Authenticate the user and provide a token
 router.route('/auth')
   .post(function(request, response)
   {
@@ -187,6 +149,74 @@ router.route('/auth')
         });
       }
 		});
+  });
+
+  // JWT SECURITY
+  // =============================================================================
+  router.use(function(request, response, next)
+  {
+    // Check header or url parameters or post parameters for token
+    var token = request.body.token || request.query.token || request.headers['x-access-token'];
+
+    // decode token
+    if (token)
+    {
+      // Verifies secret and checks exp
+      jwt.verify(token, app.get('superSecret'), function(error, decoded)
+      {
+        if (error)
+        {
+          return response.json(
+            {
+              success: false,
+              message: 'Failed to authenticate token.'
+            });
+        }
+        else
+        {
+          // If everything is good, save to request for use in other routes
+          request.decoded = decoded;
+          next();
+        }
+      });
+    }
+    else
+    {
+      // If there is no token
+      // Return an error
+      return response.status(403).send(
+        {
+          success: false,
+          message: 'No token provided.'
+      });
+    }
+  });
+
+  /*------------------------------------*/
+  // Post a new comic or update a comic //
+  /*------------------------------------*/
+router.route("/comic")
+  .post(function(request, response)
+  {
+    // Build the new comic data structure
+      newComic = {
+      "name": request.body.name,
+      "image": request.body.image,
+      "date-published": Math.floor(new Date() / 1000),
+      "visible": true,
+      "comments": request.body.comments,
+      "chapter": "",
+      "previouse": "",
+      "next": null,
+      "tags": request.body.tags
+    };
+
+    // Grab the latest comic
+    getLatest(
+      function()
+      {
+        linkNewComic();
+      }, response.json());
   });
 
 // Utility Functions
