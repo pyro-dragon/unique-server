@@ -31,8 +31,16 @@ app.use(bodyParser.json());
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
+
+    if(req.method == "OPTIONS")
+    {
+      res.send(200);
+    }
+    else {
+      next();
+    }
 });
 
 var port = process.env.PORT || 8080;	// Set our port
@@ -44,8 +52,10 @@ var router = express.Router();	// Get an instance of the express Router
 // Middleware to use for all requests
 router.use(function(request, response, next)
 {
+
 	// Do logging
-	console.log("Content-Type: " + request.headers["content-type"]);
+	console.log("Content-Type: " + request.get("content-type"));
+  console.log("Body: " + request.body);
 
 	next();
 });
@@ -54,7 +64,7 @@ router.use(function(request, response, next)
 // =============================================================================
 
 // Test route to make sure everything is working (accessed at GET http://localhost:8080)
-router.get("/", function(request, response) {
+router.get("/", function(request, response, next) {
 	response.json({ message: "hooray! welcome to our api!"});
 });
 
