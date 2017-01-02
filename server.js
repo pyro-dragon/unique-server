@@ -266,6 +266,11 @@ var getLatest = function(success, fail)
 				return;
 			}
 		}
+    else if(body.rows.length <= 0)
+    {
+				console.error("No values returned.");
+				success(null);
+    }
 		else
 		{
 			latestComic = body.rows[0].value;
@@ -275,7 +280,7 @@ var getLatest = function(success, fail)
 			if(typeof success == "function")
 			{
 				console.log("Executing success function...");
-				success(body);
+				success(body.rows[0].value);
 			}
 		}
 	});
