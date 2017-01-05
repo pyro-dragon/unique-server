@@ -32,7 +32,7 @@ app.use(bodyParser.json());
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, x-access-token");
 
     if(req.method == "OPTIONS")
     {
@@ -219,7 +219,13 @@ router.route("/comic")
     getLatest(
       function()
       {
-        linkNewComic();
+        // Link up is there is a latest comic
+        //linkNewComic();
+
+        // Write out the new and latest comics
+      	console.log("Writing out the new comic");
+      	putComic(newComic);
+
       }, response.json());
   });
 
@@ -229,20 +235,17 @@ router.route("/comic")
 /* Set up next/prev links for a new comic */
 var linkNewComic = function(body)
 {
+  // Check to see if there even is a latest comic
+  if(!latestComic)
+  {
+    // There is no latests, this is the first page
+    return;
+  }
+
 	// We already have the latest comic
 	console.log("latestComic._id: " + latestComic);
 	newComic.previouse = latestComic._id;
-
-	// Write out the new and latest comics
-	console.log("Writing out the new comic");
-	putComic(newComic,
-		function(body)
-		{
-			latestComic.next = body.id;
-			putComic(latestComic);
-		}
-
-	);
+  latestComic.next = body.id;
 };
 
 // Get the latest comic
@@ -299,7 +302,7 @@ var putComic = function(comic, success, fail)
 		{
 			console.error(JSON.stringify(error));
 
-			if(typeof fail == "function")
+			if(typeof fail === "function")
 			{
 				console.log("Executing fail function...");
 				fail(error);
@@ -309,7 +312,7 @@ var putComic = function(comic, success, fail)
 		}
 		else
 		{
-			if (typeof success == "function")
+			if (typeof success === "function")
 			{
 				console.log("Executing success function...");
 				success(body);
