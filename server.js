@@ -196,9 +196,9 @@ router.route('/auth')
     }
   });
 
-  /*------------------------------------*/
-  // Post a new comic or update a comic //
-  /*------------------------------------*/
+/*------------------------------------*/
+// Post a new comic or update a comic //
+/*------------------------------------*/
 router.route("/comic")
   .post(function(request, response)
   {
@@ -223,6 +223,16 @@ router.route("/comic")
       }, response.json());
   });
 
+/*----------------*/
+// Delete a comic //
+/*----------------*/
+router.route("/comic")
+  .delete(function(request, response)
+  {
+    deleteComic(request, response);
+  });
+
+// =============================================================================
 // Utility Functions
 // =============================================================================
 
@@ -318,6 +328,24 @@ var putComic = function(comic, success, fail)
 
 		console.log("Successful upload!");
 	});
+};
+
+// Delete a comic
+var deleteComic = function(request, response)
+{
+	console.log("Deleting a comic");
+
+  db.destroy(request.id, request.rev, function(error, body)
+  {
+    if(error)
+    {
+			console.error(JSON.stringify(error));
+    }
+    else
+    {
+      		console.log("Successful delete!");
+    }
+  });
 };
 
 // REGISTER OUR ROUTES -------------------------------
