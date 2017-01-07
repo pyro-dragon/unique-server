@@ -24,19 +24,18 @@ var newComic = null;
 
 // Configure app to use bodyParser()
 // This will let us get the data from a POST
-app.use(bodyParser.urlencoded({limit: '50mb'}));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(bodyParser.json({limit: '50mb'}));
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, x-access-token");
 
     if(req.method == "OPTIONS")
     {
-      res.send(200);
+      res.sendStatus(200);
     }
     else {
       next();
@@ -52,6 +51,7 @@ var router = express.Router();	// Get an instance of the express Router
 // Middleware to use for all requests
 router.use(function(request, response, next)
 {
+  console.log("middleware1");
 
 	// Do logging
 	console.log("Content-Type: " + request.get("content-type"));
@@ -70,7 +70,7 @@ router.get("/", function(request, response, next) {
 
 // More routes for our API will happen here
 
-router.route("/comics")
+router.route("/comic")
 
 	.get(function(request, response)
 	{
@@ -80,7 +80,7 @@ router.route("/comics")
 		});
 	});
 
-router.route("/comics/latest")
+router.route("/comic/latest")
 
 	.get(function(request, response)
 	{
@@ -99,111 +99,100 @@ router.route("/comics/latest")
 		});
 	});
 
-router.route("/comics/:id")
+// Get a given comic
+router.route("/comic/:id").get(function(request, response)
+{
+	response.json({ message: "Getting an individual comic" });
+});
 
-	.get(function(request, response)
-	{
-		response.json({ message: "Getting an individual comic" });
-	})
-
-	.post(function(request, response)
-	{
-	    response.json({ message: "Updating a comic" });
-	})
-
-	.delete(function(request, response)
-	{
-		response.json({ message: "Deleting a comic" });
-	});
-
-router.route("/logout")
-
-	.post(function(request, response)
-	{
-		response.json({ message: "Logging the user out" });
-	});
+router.route("/logout").post(function(request, response)
+{
+	response.json({ message: "Logging the user out" });
+});
 
 // Authenticate the user and provide a token
-router.route('/auth')
-  .post(function(request, response)
-  {
-    // Check for username
-    db.view("unique", "authenticate", { keys: [request.body.username] }, function(error, body)
-		{
-      //console.log(request);
+router.route('/auth').post(function(request, response)
+{
+  // Check for username
+  db.view("unique", "authenticate", { keys: [request.body.username] }, function(error, body)
+	{
+    //console.log(request);
 
-      // Now check their password
-      if(request.body.password == body.rows[0].value)
-      {
-          // Matching password too, create a token
-        var token = jwt.sign(body.rows[0], app.get('superSecret'), {
-          "expiresIn": 86400 // expires in 24 hours
-        });
-
-        console.log("User " + request.body.username + " logged in.");
-
-        response.json(token);
-      }
-      else
-      {
-        console.log("Username or password not found");
-        response.json({
-          success: false,
-          message: 'Wrong username or password'
-        });
-      }
-		});
-  });
-
-  // JWT SECURITY
-  // =============================================================================
-  router.use(function(request, response, next)
-  {
-    // Check header or url parameters or post parameters for token
-    var token = request.body.token || request.query.token || request.headers['x-access-token'];
-
-    // decode token
-    if (token)
+    // Now check their password
+    if(request.body.password == body.rows[0].value)
     {
-      // Verifies secret and checks exp
-      jwt.verify(token, app.get('superSecret'), function(error, decoded)
-      {
-        if (error)
-        {
-          return response.json(
-            {
-              success: false,
-              message: 'Failed to authenticate token.'
-            });
-        }
-        else
-        {
-          // If everything is good, save to request for use in other routes
-          request.decoded = decoded;
-          next();
-        }
+        // Matching password too, create a token
+      var token = jwt.sign(body.rows[0], app.get('superSecret'), {
+        "expiresIn": 86400 // expires in 24 hours
       });
+
+      console.log("User " + request.body.username + " logged in.");
+
+      response.json(token);
     }
     else
     {
-      // If there is no token
-      // Return an error
-      return response.status(403).send(
-        {
-          success: false,
-          message: 'No token provided.'
+      console.log("Username or password not found");
+      response.json({
+        success: false,
+        message: 'Wrong username or password'
       });
     }
-  });
+	});
+});
 
-  /*------------------------------------*/
-  // Post a new comic or update a comic //
-  /*------------------------------------*/
+// JWT SECURITY
+// =============================================================================
+router.use(function(request, response, next)
+{
+  console.log("getting token");
+  // Check header or url parameters or post parameters for token
+  var token = request.body.token || request.query.token || request.headers['x-access-token'];
+  console.log("got token");
+
+  // decode token
+  if (token)
+  {
+    // Verifies secret and checks exp
+    jwt.verify(token, app.get('superSecret'), function(error, decoded)
+    {
+      if (error)
+      {
+        return response.json(
+          {
+            success: false,
+            message: 'Failed to authenticate token.'
+          });
+      }
+      else
+      {
+        // If everything is good, save to request for use in other routes
+        request.decoded = decoded;
+        next();
+      }
+    });
+  }
+  else
+  {
+    // If there is no token
+    // Return an error
+    return response.status(403).send(
+      {
+        success: false,
+        message: 'No token provided.'
+    });
+  }
+});
+
+/*------------------------------------*/
+// Post a new comic or update a comic //
+/*------------------------------------*/
 router.route("/comic")
   .post(function(request, response)
   {
     // Build the new comic data structure
-      newComic = {
+    console.log("building comic");
+    newComic = {
       "name": request.body.name,
       "image": request.body.image,
       "date-published": Math.floor(new Date() / 1000),
@@ -215,12 +204,15 @@ router.route("/comic")
       "tags": request.body.tags
     };
 
+
+    putComic(newComic);
+
     // Grab the latest comic
-    getLatest(
+    /*getLatest(
       function()
       {
         linkNewComic();
-      }, response.json());
+      }, response.json());*/
   });
 
 // Utility Functions
