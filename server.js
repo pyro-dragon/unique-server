@@ -84,6 +84,7 @@ router.route("/comic/latest")
 
 	.get(function(request, response)
 	{
+	  console.log("getting latest");
 		getLatest(
 
 		// Success
@@ -140,10 +141,8 @@ router.route('/auth').post(function(request, response)
 // =============================================================================
 router.use(function(request, response, next)
 {
-  console.log("getting token");
   // Check header or url parameters or post parameters for token
   var token = request.body.token || request.query.token || request.headers['x-access-token'];
-  console.log("got token");
 
   // decode token
   if (token)
