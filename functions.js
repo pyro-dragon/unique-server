@@ -124,17 +124,17 @@ var getComic = function(db, comicID, success, fail)
 var putComic = function(db, comic, success, fail)
 {
 	// Get the ID of the current latest comic before uploading anything
-	getLatest(db, function(body)
+	getLatest(db, function(currentLatestComic)
 	{
 		// Link this to the new comic
-		if(body !== null)
+		if(currentLatestComic !== null)
 		{
-			comic.previous = body._id;
+			comic.previous = currentLatestComic._id;
 		}
 
 		// Upload the comic
 		console.log("Preparing to PUT. \ncomic: " + comic + "\nsuccess: " + success + "\nfail: " + fail);
-		db.insert(comic, function(error, comic)
+		db.insert(comic, function(error, responseBody)
 		{
 			if(error)
 			{
@@ -150,11 +150,30 @@ var putComic = function(db, comic, success, fail)
 			}
 			else
 			{
-				if (typeof success == "function")
+				// Set the old latest comic to link to the new one
+				currentLatestComic.next = responseBody.id;
+
+				// Commit this updated
+				db.insert(currentLatestComic, function(error, updateResponse)
 				{
-					console.log("Executing success function...");
-					success(comic);
-				}
+					if(error)
+					{
+						console.error(JSON.stringify(error));
+
+						if(typeof fail == "function")
+						{
+							console.log("Executing fail function...");
+							fail(error);
+						}
+
+						return;
+					}
+					else if (typeof success == "function")
+					{
+						console.log("Executing success function...");
+						success(updateResponse);
+					}
+				});
 			}
 
 			console.log("Successful upload!");
