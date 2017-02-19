@@ -22,11 +22,11 @@ var getLatest = function(db, success, fail)
 				return;
 			}
 		}
-    else if(body.rows.length <= 0)
-    {
-				console.error("No values returned.");
-				success(null);
-    }
+	    else if(body.rows.length <= 0)
+	    {
+					console.error("No values returned.");
+					success(null);
+	    }
 		else
 		{
 			console.log("Latest comic updated to be: " + body.rows[0].value.name);
@@ -123,31 +123,42 @@ var getComic = function(db, comicID, success, fail)
 // success - A function to perform
 var putComic = function(db, comic, success, fail)
 {
-	console.log("Preparing to PUT. \ncomic: " + comic + "\nsuccess: " + success + "\nfail: " + fail);
-	db.insert(comic, function(error, body)
+	// Get the ID of the current latest comic before uploading anything
+	getLatest(db, function(body)
 	{
-		if(error)
+		// Link this to the new comic
+		if(body !== null)
 		{
-			console.error(JSON.stringify(error));
-
-			if(typeof fail == "function")
-			{
-				console.log("Executing fail function...");
-				fail(error);
-			}
-
-			return;
-		}
-		else
-		{
-			if (typeof success == "function")
-			{
-				console.log("Executing success function...");
-				success(body);
-			}
+			comic.previous = body._id;
 		}
 
-		console.log("Successful upload!");
+		// Upload the comic
+		console.log("Preparing to PUT. \ncomic: " + comic + "\nsuccess: " + success + "\nfail: " + fail);
+		db.insert(comic, function(error, comic)
+		{
+			if(error)
+			{
+				console.error(JSON.stringify(error));
+
+				if(typeof fail == "function")
+				{
+					console.log("Executing fail function...");
+					fail(error);
+				}
+
+				return;
+			}
+			else
+			{
+				if (typeof success == "function")
+				{
+					console.log("Executing success function...");
+					success(comic);
+				}
+			}
+
+			console.log("Successful upload!");
+		});
 	});
 };
 module.exports = {

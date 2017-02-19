@@ -217,58 +217,43 @@ router.route("/comic").post(function(request, response)
   // Build the new comic data structure
 	console.log("building comic");
 	newComic = {
-	    "_id": request.body._id,
-	    "_rev": request.body._rev,
 	    "name": request.body.name,
 	    "image": request.body.image,
 	    "date-published": Math.floor(new Date() / 1000),
 	    "visible": true,
 	    "comments": request.body.comments,
 	    "chapter": "",
-	    "previouse": "",
+	    "previous": "",
 	    "next": null,
 	    "tags": request.body.tags
 	};
 
-	functions.putComic(db, newComic, function()
-	{
-		response.json(
+
+	console.log("Sending this: " + JSON.stringify(newComic));
+
+	functions.putComic(db, newComic,
+
+		// Success
+		function()
 		{
-		    success: true,
-		    message: 'Upload successful!'
-	    });
-	},
+			response.json(
+			{
+			    success: true,
+			    message: 'Upload successful!'
+		    });
+		},
 
-	function(error)
-	{
-	    response.json(
+		// Fail
+		function(error)
 		{
-			success: false,
-			message: error
-	    });
-	});
-});
-
-// Utility Functions
-// =============================================================================
-
-/* Set up next/prev links for a new comic */
-var linkNewComic = function(body)
-{
-	// We already have the latest comic
-	console.log("latestComic._id: " + latestComic);
-	newComic.previouse = latestComic._id;
-
-	// Write out the new and latest comics
-	console.log("Writing out the new comic");
-	putComic(newComic,
-		function(body)
-		{
-			latestComic.next = body.id;
-			functions.putComic(latestComic);
+		    response.json(
+			{
+				success: false,
+				message: error
+		    });
 		}
 	);
-};
+});
 
 // REGISTER OUR ROUTES -------------------------------
 // All of our routes will be prefixed with /api
