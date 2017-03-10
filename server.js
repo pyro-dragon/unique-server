@@ -119,8 +119,7 @@ router.route("/comic/first").get(function(request, response)
 // Get a given comic
 router.route("/comic/:id").get(function(request, response)
 {
-	response.json({ message: "Getting an individual comic" });
-	functions.getComic(db, request.id,
+	functions.getComic(db, request.params.id,
 
 		// Success
 		function(body)
