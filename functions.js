@@ -180,9 +180,95 @@ var putComic = function(db, comic, success, fail)
 		});
 	});
 };
+
+// Update document - An internal function for updating individual fields in documents
+// @Args
+// db - The database handle object
+// documentID - The ID of a document to update
+// field - The name of the field to be updated
+// data - The data to insert into the field
+// success - A callback function to run after successful completion
+// fail - A callback function to run in the event of an error occuring
+var update = function(db, documentID, field, data, success, fail)
+{
+	console.log("Updating the field " + field + " in document " + documentID + " to " + data);
+	db.updateWithHandler("_design/unique", "inplace", documentID, {
+			field: field, value: data
+		},
+		function(error,body)
+		{
+			console.log(body);
+		}
+	);
+};
+
+// Delete a comic page
+// @Args
+// comic - A comic object. No ID field = new comic
+// success - A function to perform on successful completion of the function
+// fail - A function to perform in the event of an error occuring
+var deleteComic = function(db, comicID, comicRev, success, fail)
+{
+	var prev = null;
+	var next = null;
+
+	// Get the IDs of the comics linked before and after this comic
+	getComic(db, comicID,
+
+		// Success
+		function(response, request)
+		{
+			if(response.previous)
+			{
+				prev = response.previous;
+			}
+
+			if(response.next)
+			{
+				next = response.next;
+			}
+		},
+
+		// Failed
+		function(error)
+		{
+			console.error("There was an error getting the document to be deleted: " + error.data);
+		}
+	);
+
+	// Now destroy the document on the server
+	db.destroy(comicID, comicRev,
+		function(err, body) {
+			if (err)
+			{
+				console.error(body);
+			}
+			else
+			{
+				console.log("Successfully deleted comic: " + comicID)
+			}
+		}
+	);
+
+	// Now, using updates, re-link the previous and next comics to eachother
+	// /<database>/_design/<design>/_update/<function>/<docid>
+	//http://127.0.0.1:5984/<my_database>/_design/<my_designdoc>/_update/in-place-query/<mydocId>?field=title&value=test
+
+	if(prev)
+	{
+		update(db, prev, "next", next);
+	};
+
+	if(next)
+	{
+		update(db, next, "prev", prev);
+	}
+};
+
 module.exports = {
     "getLatest": getLatest,
     "getFirst": getFirst,
     "getComic": getComic,
-    "putComic": putComic
+    "putComic": putComic,
+	"deleteComic": deleteComic
 };

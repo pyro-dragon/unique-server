@@ -254,6 +254,37 @@ router.route("/comic").post(function(request, response)
 	);
 });
 
+/*---------------------*/
+// Delete a comic page //
+/*---------------------*/
+router.route("/comic/:id/:rev").delete(function(request, response)
+{
+	console.log("Deleting comic");
+
+	functions.deleteComic(db, request.params.id, request.params.rev,
+
+		// Success
+		function()
+		{
+			response.json(
+			{
+			    success: true,
+			    message: 'Delete successful!'
+		    });
+		},
+
+		// Fail
+		function(error)
+		{
+		    response.json(
+			{
+				success: false,
+				message: error
+		    });
+		}
+	);
+});
+
 // REGISTER OUR ROUTES -------------------------------
 // All of our routes will be prefixed with /api
 app.use('/', router);
